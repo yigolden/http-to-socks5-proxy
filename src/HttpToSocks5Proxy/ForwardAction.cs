@@ -63,7 +63,7 @@ namespace HttpToSocks5Proxy
             }
             else if (inboundUri.Host.Equals("localhost", StringComparison.OrdinalIgnoreCase))
             {
-                inboundEP = new IPEndPoint(IPAddress.IPv6Any, inboundUri.Port);
+                inboundEP = new IPEndPoint(IPAddress.IPv6Loopback, inboundUri.Port);
             }
             else
             {
