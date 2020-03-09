@@ -312,12 +312,18 @@ namespace HttpToSocks5Proxy
 
         private const int BufferSize = 4096;
 
-        private static Task PumpDataAsync(Stream stream, IDuplexPipe pipe, CancellationToken cancellationToken)
+        private static async Task PumpDataAsync(Stream stream, IDuplexPipe pipe, CancellationToken cancellationToken)
         {
-            var streamToPipeTask = Task.Run(() => PumpDataFromStreamToPipe(stream, pipe, cancellationToken));
-            var pipeToStreamTask = Task.Run(() => PumpDataFromPipeToStream(pipe, stream, cancellationToken));
+            CancellationTokenSource cts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, default);
 
-            return Task.WhenAll(streamToPipeTask, pipeToStreamTask);
+            var streamToPipeTask = Task.Run(() => PumpDataFromStreamToPipe(stream, pipe, cts.Token));
+            var pipeToStreamTask = Task.Run(() => PumpDataFromPipeToStream(pipe, stream, cts.Token));
+
+            Task completedTask = await Task.WhenAny(streamToPipeTask, pipeToStreamTask).ConfigureAwait(false);
+            Task otherTask = ReferenceEquals(completedTask, streamToPipeTask) ? pipeToStreamTask : streamToPipeTask;
+
+            await Task.WhenAny(otherTask, Task.Delay(2000)).ConfigureAwait(false);
+            cts.Cancel();
 
             static async Task PumpDataFromStreamToPipe(Stream stream, IDuplexPipe pipe, CancellationToken cancellationToken)
             {
@@ -330,6 +336,7 @@ namespace HttpToSocks5Proxy
                         int readSize = await stream.ReadAsync(memory, cancellationToken).ConfigureAwait(false);
                         if (readSize == 0)
                         {
+                            await writer.CompleteAsync().ConfigureAwait(false);
                             pipe.Input.CancelPendingRead();
                             return;
                         }
@@ -353,7 +360,7 @@ namespace HttpToSocks5Proxy
                         ReadResult readResult = await reader.ReadAsync(cancellationToken).ConfigureAwait(false);
                         if (readResult.IsCompleted || readResult.IsCanceled)
                         {
-                            await pipe.Output.CompleteAsync();
+                            pipe.Output.CancelPendingFlush();
                             return;
                         }
                         foreach (ReadOnlyMemory<byte> buffer in readResult.Buffer)
