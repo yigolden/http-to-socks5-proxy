@@ -37,7 +37,7 @@ namespace HttpToSocks5Proxy
             IDuplexPipe? tunnel = null;
             try
             {
-                using (var parser = new HttpParser(stream))
+                using (var parser = new HttpRequestParser(stream))
                 {
                     // Parse HTTP header
                     if (!(await parser.ParseAsync(cancellationToken).ConfigureAwait(false)))
@@ -232,7 +232,7 @@ namespace HttpToSocks5Proxy
             return true;
         }
 
-        private static async Task SendInitialRequestForHttpAsync(HttpParser parser, Uri uri, PipeWriter pipeWriter, CancellationToken cancellationToken)
+        private static async Task SendInitialRequestForHttpAsync(HttpRequestParser parser, Uri uri, PipeWriter pipeWriter, CancellationToken cancellationToken)
         {
             // Send request line
             WriteRequestLine(pipeWriter, parser.Method.ToString(), uri);
@@ -299,7 +299,7 @@ namespace HttpToSocks5Proxy
             }
         }
 
-        private static async Task SendInitialRequestForConnectAsync(HttpParser parser, PipeWriter pipeWriter, CancellationToken cancellationToken)
+        private static async Task SendInitialRequestForConnectAsync(HttpRequestParser parser, PipeWriter pipeWriter, CancellationToken cancellationToken)
         {
             Memory<byte> remainingBytes = parser.RemainingBytes;
             if (!remainingBytes.IsEmpty)

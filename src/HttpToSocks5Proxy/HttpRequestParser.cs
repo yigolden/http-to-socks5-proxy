@@ -9,7 +9,7 @@ using System.Threading.Tasks;
 
 namespace HttpToSocks5Proxy
 {
-    internal class HttpParser : IDisposable
+    internal class HttpRequestParser : IDisposable
     {
         private readonly Stream _stream;
 
@@ -32,13 +32,13 @@ namespace HttpToSocks5Proxy
 
         public string Url => _url ?? throw new InvalidOperationException();
 
-        public IList<KeyValuePair<string, string>> Headers => _headers;
+        public List<KeyValuePair<string, string>> Headers => _headers;
 
         public string? ProxyAuthorization => _proxyAuthorization;
 
         private static ReadOnlySpan<byte> s_httpVersionString => new byte[] { (byte)'H', (byte)'T', (byte)'T', (byte)'P', (byte)'/', (byte)'1', (byte)'.', (byte)'1' };
 
-        public HttpParser(Stream stream)
+        public HttpRequestParser(Stream stream)
         {
             _stream = stream;
             _headers = new List<KeyValuePair<string, string>>();
@@ -59,7 +59,7 @@ namespace HttpToSocks5Proxy
             byte[]? buffer = _primaryBuffer;
             if (buffer is null)
             {
-                throw new ObjectDisposedException(nameof(HttpParser));
+                throw new ObjectDisposedException(nameof(HttpRequestParser));
             }
 
             Stream stream = _stream;
